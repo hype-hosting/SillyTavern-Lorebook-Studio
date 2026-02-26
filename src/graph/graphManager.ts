@@ -6,6 +6,7 @@
  */
 
 import ForceGraph3D from '3d-force-graph';
+import SpriteText from 'three-spritetext';
 import { LorebookEntry } from '../data/lorebookData';
 import { RecursionEdge } from '../data/recursionDetector';
 import { ManualLinkData, getSettings, updateSettings } from '../utils/settings';
@@ -106,10 +107,30 @@ export function initGraph(
     .linkOpacity((link: GraphLink) => getLinkOpacity(link))
     .linkCurvature((link: GraphLink) => getLinkCurvature(link))
     .linkCurveRotation(0.5)
-    .linkDirectionalArrowLength(3)
+    .linkDirectionalArrowLength(2)
     .linkDirectionalArrowRelPos(1)
     .linkDirectionalArrowColor((link: GraphLink) => getLinkColor(link))
     .linkVisibility((link: GraphLink) => getLinkVisibility(link))
+    // Keyword labels on links
+    .linkThreeObjectExtend(true)
+    .linkThreeObject((link: GraphLink) => {
+      const text = link.triggerKey || '';
+      if (!text) return null;
+      const sprite = new SpriteText(text);
+      sprite.textHeight = 1.5;
+      sprite.color = getLinkColor(link);
+      sprite.fontFace = 'system-ui, -apple-system, sans-serif';
+      sprite.backgroundColor = false as unknown as string;
+      sprite.borderWidth = 0;
+      return sprite;
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .linkPositionUpdate((obj: any, { start, end }: { start: { x: number; y: number; z: number }; end: { x: number; y: number; z: number } }) => {
+      if (!obj) return;
+      obj.position.x = (start.x + end.x) / 2;
+      obj.position.y = (start.y + end.y) / 2;
+      obj.position.z = (start.z + end.z) / 2;
+    })
     // Interactions
     .onNodeClick(handleNodeClick)
     .onNodeRightClick(handleNodeRightClick)
@@ -325,9 +346,10 @@ export function applySearchHighlight(matchingIds: Set<string>): void {
   }
 
   refreshNodeObjects();
-  // Force link re-render
+  // Force link re-render (including keyword labels)
   graph.linkColor(graph.linkColor());
   graph.linkOpacity(graph.linkOpacity());
+  graph.linkThreeObject(graph.linkThreeObject());
 }
 
 /**
