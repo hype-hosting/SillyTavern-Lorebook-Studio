@@ -45,9 +45,9 @@ export function getLinkColor(link: GraphLink): string {
  * Get the width for a link.
  */
 export function getLinkWidth(link: GraphLink): number {
-  if (link.type === 'manual') return 0.6;
-  if (link.keyType === 'secondary') return 0.4;
-  return 0.8;
+  if (link.type === 'manual') return 0.25;
+  if (link.keyType === 'secondary') return 0.15;
+  return 0.3;
 }
 
 /**
@@ -58,9 +58,9 @@ export function getLinkOpacity(link: GraphLink): number {
   if (dimmedLinkIds && dimmedLinkIds.size > 0 && dimmedLinkIds.has(id)) {
     return 0.05;
   }
-  if (link.type === 'manual') return 0.5;
-  if (link.keyType === 'secondary') return 0.3;
-  return 0.5;
+  if (link.type === 'manual') return 0.4;
+  if (link.keyType === 'secondary') return 0.25;
+  return 0.35;
 }
 
 /**
