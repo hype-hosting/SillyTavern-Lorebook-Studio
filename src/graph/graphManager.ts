@@ -52,6 +52,52 @@ let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 // Auto-orbit state
 let autoOrbitEnabled = false;
 
+// Three.js object caches — tracks every SpriteText we create so we can
+// dispose GPU resources (texture, material, geometry) when replaced or
+// when the graph is destroyed.  Without this, every refresh/selection
+// change leaks SpriteText objects, each holding a canvas texture in VRAM.
+const nodeObjectCache = new Map<string, SpriteText>();
+const linkLabelCache = new Map<string, SpriteText>();
+
+/**
+ * Dispose a SpriteText's GPU resources (canvas texture, material, geometry).
+ */
+function disposeSpriteText(sprite: SpriteText): void {
+  try {
+    // SpriteText extends THREE.Sprite — access inherited props via any
+    // since three-spritetext's type defs don't expose them.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const obj = sprite as any;
+    if (obj.material) {
+      if (obj.material.map) obj.material.map.dispose();
+      obj.material.dispose();
+    }
+    if (obj.geometry) obj.geometry.dispose();
+  } catch {
+    // Silently ignore disposal errors
+  }
+}
+
+/**
+ * Dispose all cached node sprites.
+ */
+function disposeAllNodeObjects(): void {
+  for (const sprite of nodeObjectCache.values()) {
+    disposeSpriteText(sprite);
+  }
+  nodeObjectCache.clear();
+}
+
+/**
+ * Dispose all cached link label sprites.
+ */
+function disposeAllLinkLabels(): void {
+  for (const sprite of linkLabelCache.values()) {
+    disposeSpriteText(sprite);
+  }
+  linkLabelCache.clear();
+}
+
 // --- Public API (same exports as the old Cytoscape-based graphManager) ---
 
 /**
@@ -118,6 +164,12 @@ export function initGraph(
     // Keyword labels on links
     .linkThreeObjectExtend(true)
     .linkThreeObject((link: GraphLink) => {
+      // Dispose old cached label for this link
+      const oldLabel = linkLabelCache.get(link.id);
+      if (oldLabel) {
+        disposeSpriteText(oldLabel);
+        linkLabelCache.delete(link.id);
+      }
       const text = link.triggerKey || '';
       if (!text) return null;
       const sprite = new SpriteText(text);
@@ -126,6 +178,7 @@ export function initGraph(
       sprite.fontFace = 'system-ui, -apple-system, sans-serif';
       sprite.backgroundColor = false as unknown as string;
       sprite.borderWidth = 0;
+      linkLabelCache.set(link.id, sprite);
       return sprite;
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,13 +254,20 @@ export function resizeGraph(): void {
 export function destroyGraph(): void {
   if (graph) {
     savePositions(currentBookName);
-    // Clean up the graph
+
+    // Dispose all cached Three.js sprites (frees GPU textures/materials/geometry)
+    disposeAllNodeObjects();
+    disposeAllLinkLabels();
+
+    // Destroy graph instance BEFORE clearing the container DOM,
+    // so _destructor can still access the WebGL context for cleanup.
+    graph._destructor?.();
+    graph = null;
+
     if (graphContainer) {
       graphContainer.removeEventListener('contextmenu', preventContextMenu);
       graphContainer.innerHTML = '';
     }
-    graph._destructor?.();
-    graph = null;
   }
   graphNodes = [];
   graphLinks = [];
@@ -260,16 +320,31 @@ export function refreshGraph(
     ...manualLinks.map((link) => buildManualLink(link)),
   ];
 
-  // Update the graph
-  graph.graphData({ nodes: graphNodes, links: graphLinks });
-
-  // Restore selection
+  // Restore selection BEFORE graphData so the nodeThreeObject callback
+  // uses the correct selectedNodeId (avoids a redundant refreshNodeObjects call).
   if (prevSelectedId) {
     selectedNodeId = graphNodes.find((n) => n.id === prevSelectedId) ? prevSelectedId : null;
   }
 
-  // Refresh visual state
-  refreshNodeObjects();
+  // Update the graph — triggers nodeThreeObject/linkThreeObject callbacks
+  // for all nodes/links.  The callbacks dispose old cached sprites internally.
+  graph.graphData({ nodes: graphNodes, links: graphLinks });
+
+  // Clean up cached sprites for nodes/links that no longer exist (e.g. deleted entries)
+  const activeNodeIds = new Set(graphNodes.map((n) => n.id));
+  for (const [id, sprite] of nodeObjectCache) {
+    if (!activeNodeIds.has(id)) {
+      disposeSpriteText(sprite);
+      nodeObjectCache.delete(id);
+    }
+  }
+  const activeLinkIds = new Set(graphLinks.map((l) => l.id));
+  for (const [id, sprite] of linkLabelCache) {
+    if (!activeLinkIds.has(id)) {
+      disposeSpriteText(sprite);
+      linkLabelCache.delete(id);
+    }
+  }
 }
 
 /**
@@ -547,10 +622,16 @@ function buildManualLink(link: ManualLinkData): GraphLink {
 }
 
 function createNodeObject(node: GraphNode): unknown {
-  if (currentViewMode === 'sprites') {
-    return createLabelSprite(node, selectedNodeId, highlightedNodeIds, connectSourceId);
-  }
-  return createCardSprite(node, selectedNodeId, highlightedNodeIds, connectSourceId);
+  // Dispose the previously cached sprite for this node (frees GPU texture/material/geometry)
+  const oldSprite = nodeObjectCache.get(node.id);
+  if (oldSprite) disposeSpriteText(oldSprite);
+
+  const sprite = currentViewMode === 'sprites'
+    ? createLabelSprite(node, selectedNodeId, highlightedNodeIds, connectSourceId)
+    : createCardSprite(node, selectedNodeId, highlightedNodeIds, connectSourceId);
+
+  nodeObjectCache.set(node.id, sprite);
+  return sprite;
 }
 
 /**
