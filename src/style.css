@@ -473,13 +473,19 @@
   min-width: 200px;
   position: relative;
   border-radius: var(--ls-radius);
-  margin: 8px 0 8px 8px;
+  margin: 8px;
   overflow: hidden;
   transition: flex 0.3s ease;
 }
 
 .ls-graph-card.ls-graph-hidden {
   display: none;
+}
+
+/* When canvas is hidden, entry cards expand to fill the space equally */
+.ls-content.ls-canvas-hidden .ls-entry-card {
+  flex: 1 1 0%;
+  max-width: none;
 }
 
 /* --- Graph Container --- */

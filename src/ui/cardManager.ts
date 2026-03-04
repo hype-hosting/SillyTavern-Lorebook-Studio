@@ -82,6 +82,18 @@ export function hasOpenCards(): boolean {
 }
 
 /**
+ * Reset inline flex-basis on all open cards (e.g. after toggling canvas visibility).
+ */
+export function resetCardSizes(): void {
+  if (!cards) return;
+  for (const card of cards) {
+    if (card.isOpen()) {
+      card.getElement().style.flexBasis = '';
+    }
+  }
+}
+
+/**
  * Called after card open/close to let the graph resize to its new flex size.
  */
 function onCardLayoutChanged(): void {

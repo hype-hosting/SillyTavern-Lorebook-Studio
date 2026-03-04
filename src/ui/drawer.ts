@@ -12,7 +12,7 @@ import { initGraph, destroyGraph, refreshGraph, runLayout, fitGraph, zoomIn, zoo
 import { LayoutName } from '../graph/layouts';
 import { getSettings, updateSettings, ThemeName } from '../utils/settings';
 import { initToolbarEvents } from './toolbar';
-import { initCardManager, closeAllCards, openEntryCard, hasOpenCards } from './cardManager';
+import { initCardManager, closeAllCards, openEntryCard, hasOpenCards, resetCardSizes } from './cardManager';
 import { initStatsPanel } from './statsPanel';
 import { initContextMenu } from './contextMenu';
 import { initCategoryManager } from './categoryManager';
@@ -609,11 +609,16 @@ let graphCardVisible = true;
 function toggleGraphCard(): void {
   const card = document.getElementById('ls-graph-card');
   const btn = document.getElementById('ls-btn-toggle-graph');
+  const content = document.querySelector('.ls-content');
   if (!card) return;
 
   graphCardVisible = !graphCardVisible;
   card.classList.toggle('ls-graph-hidden', !graphCardVisible);
   btn?.classList.toggle('active', graphCardVisible);
+  content?.classList.toggle('ls-canvas-hidden', !graphCardVisible);
+
+  // Reset card sizes so they adapt to the new layout (fill equally or revert to fixed)
+  resetCardSizes();
 
   if (graphCardVisible) {
     setTimeout(() => resizeGraph(), 50);
