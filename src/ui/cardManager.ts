@@ -4,7 +4,8 @@
 
 import { EntryCard } from './entryCard';
 import { EventBus, STUDIO_EVENTS } from '../utils/events';
-import { resizeGraph } from '../graph/graphManager';
+import { createEntry } from '../data/lorebookData';
+import { focusNode, resizeGraph } from '../graph/graphManager';
 
 let cards: [EntryCard, EntryCard] | null = null;
 
@@ -16,6 +17,18 @@ export function initCardManager(parent: HTMLElement): void {
     new EntryCard(0, parent),
     new EntryCard(1, parent),
   ];
+
+  // Toolbar "Add entry" button: create the entry and open it in a card
+  EventBus.on(STUDIO_EVENTS.CREATE_ENTRY_REQUEST, async (data: unknown) => {
+    const { bookName } = (data || {}) as { bookName?: string };
+    if (!bookName) return;
+
+    const newEntry = await createEntry(bookName);
+    if (newEntry) {
+      openEntryCard(newEntry.uid, bookName);
+      focusNode(String(newEntry.uid));
+    }
+  });
 }
 
 /**

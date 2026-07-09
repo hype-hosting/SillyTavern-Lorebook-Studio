@@ -12,14 +12,16 @@ import {
 
 export type { CategoryDef, EntryMeta, EntryStatus };
 
-const DEFAULT_ENTRY_META: EntryMeta = {
-  categoryId: null,
-  tags: [],
-  notes: '',
-  status: null,
-  pinned: false,
-  colorOverride: null,
-};
+function freshDefaultMeta(): EntryMeta {
+  return {
+    categoryId: null,
+    tags: [],
+    notes: '',
+    status: null,
+    pinned: false,
+    colorOverride: null,
+  };
+}
 
 function generateId(): string {
   return 'cat-' + Math.random().toString(36).substring(2, 9);
@@ -41,7 +43,7 @@ export function getStudioData(bookName: string): StudioData {
  */
 export function getEntryMeta(bookName: string, uid: string): EntryMeta {
   const data = getStudioData(bookName);
-  return data.entryMeta[uid] || { ...DEFAULT_ENTRY_META };
+  return data.entryMeta[uid] || freshDefaultMeta();
 }
 
 /**
@@ -54,7 +56,7 @@ export function updateEntryMeta(
 ): void {
   const data = getStudioData(bookName);
   if (!data.entryMeta[uid]) {
-    data.entryMeta[uid] = { ...DEFAULT_ENTRY_META };
+    data.entryMeta[uid] = freshDefaultMeta();
   }
   Object.assign(data.entryMeta[uid], partial);
   saveSettings();

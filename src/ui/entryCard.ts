@@ -283,7 +283,7 @@ export class EntryCard {
     this.q('.ls-ec-duplicate')?.addEventListener('click', () => this.duplicateEntry());
     this.q('.ls-ec-delete')?.addEventListener('click', () => this.deleteEntry());
     this.q('.ls-ec-manage-categories')?.addEventListener('click', () => {
-      EventBus.emit('ls:open-category-manager');
+      EventBus.emit(STUDIO_EVENTS.OPEN_CATEGORY_MANAGER);
     });
   }
 
@@ -381,6 +381,8 @@ export class EntryCard {
 
     this.currentTags = [...meta.tags];
     this.renderTags();
+    this.setInput('.ls-ec-tag-input', '');
+    this.hideAutocomplete();
 
     this.setSelect('.ls-ec-status', meta.status || '');
     this.setCheckbox('.ls-ec-pinned', meta.pinned);
@@ -479,6 +481,7 @@ export class EntryCard {
   }
 
   private saveStudioMeta(bookName: string, uid: number): void {
+    this.commitPendingTag();
     const categoryId = this.getSelect('.ls-ec-category') || null;
     const status = (this.getSelect('.ls-ec-status') || null) as EntryStatus | null;
     const pinned = this.getCheckbox('.ls-ec-pinned');
@@ -544,7 +547,7 @@ export class EntryCard {
 
     // Copy studio metadata
     const meta = getEntryMeta(bookName, String(this.selectedEntry.uid));
-    updateEntryMeta(bookName, String(newEntry.uid), { ...meta });
+    updateEntryMeta(bookName, String(newEntry.uid), { ...meta, tags: [...meta.tags] });
 
     this.loadEntry(newEntry.uid, bookName);
     focusNode(String(newEntry.uid));
@@ -570,6 +573,23 @@ export class EntryCard {
   }
 
   // --- Tag Input ---
+
+  /**
+   * Commit any tag text still sitting in the input (typed but not
+   * confirmed with Enter) so it isn't silently dropped on save —
+   * and doesn't linger in the input when the card loads another entry.
+   */
+  private commitPendingTag(): void {
+    const input = this.q('.ls-ec-tag-input') as HTMLInputElement | null;
+    if (!input) return;
+    const tag = input.value.trim().toLowerCase();
+    if (tag && !this.currentTags.includes(tag)) {
+      this.currentTags.push(tag);
+      this.renderTags();
+    }
+    input.value = '';
+    this.hideAutocomplete();
+  }
 
   private initTagInput(): void {
     const input = this.q('.ls-ec-tag-input') as HTMLInputElement | null;

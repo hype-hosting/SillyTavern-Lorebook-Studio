@@ -3,6 +3,7 @@
  * Allows creating, editing, and deleting categories.
  */
 
+import { EventBus, STUDIO_EVENTS } from '../utils/events';
 import {
   getCategories, addCategory, updateCategory, deleteCategory,
 } from '../data/studioData';
@@ -13,8 +14,10 @@ import { getCurrentBookName } from './drawer';
  */
 export function initCategoryManager(): void {
   document.getElementById('ls-category-close')?.addEventListener('click', closeCategoryPanel);
-  document.getElementById('ls-btn-manage-categories')?.addEventListener('click', openCategoryPanel);
   document.getElementById('ls-btn-add-category')?.addEventListener('click', handleAddCategory);
+
+  // Opened via the "Manage" button in entry editor cards
+  EventBus.on(STUDIO_EVENTS.OPEN_CATEGORY_MANAGER, openCategoryPanel);
 
   // Enter key on name input
   document.getElementById('ls-category-new-name')?.addEventListener('keydown', (e) => {
