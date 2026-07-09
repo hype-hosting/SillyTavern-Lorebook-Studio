@@ -130,7 +130,7 @@ export function initDrawer(): void {
 
   // Add entry button
   document.getElementById('ls-btn-add-entry')?.addEventListener('click', () => {
-    EventBus.emit('ls:create-entry-request', { bookName: currentBookName });
+    EventBus.emit(STUDIO_EVENTS.CREATE_ENTRY_REQUEST, { bookName: currentBookName });
   });
 
   // View mode toggle

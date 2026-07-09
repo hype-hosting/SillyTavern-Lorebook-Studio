@@ -94,4 +94,6 @@ export const STUDIO_EVENTS = {
   ENTRY_CARD_OPENED: 'ls:entry-card-opened',
   ENTRY_CARD_CLOSED: 'ls:entry-card-closed',
   GRAPH_CARD_TOGGLED: 'ls:graph-card-toggled',
+  OPEN_CATEGORY_MANAGER: 'ls:open-category-manager',
+  CREATE_ENTRY_REQUEST: 'ls:create-entry-request',
 } as const;
